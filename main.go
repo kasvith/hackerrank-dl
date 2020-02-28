@@ -16,6 +16,8 @@ import (
 
 const UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36"
 
+type SubmissionMap map[string]Submission
+
 type Config struct {
 	Contest string `yaml:"contest"`
 	Cookies string `yaml:"cookies"`
@@ -120,8 +122,8 @@ func getContestSubmissionData(client *resty.Client, contest string, question str
 }
 
 // filter submissions and filter only top score, latest submission for a team
-func filterSubmissions(submissions *Submissions) map[string]Submission {
-	hm := make(map[string]Submission)
+func filterSubmissions(submissions *Submissions) SubmissionMap {
+	hm := make(SubmissionMap)
 
 	for _, s := range submissions.Models {
 		if val, ok := hm[s.HackerUsername]; ok {
@@ -138,7 +140,7 @@ func filterSubmissions(submissions *Submissions) map[string]Submission {
 	return hm
 }
 
-func getAllSubmissions(client *resty.Client, config *Config, question string) (map[string]Submission, error) {
+func getAllSubmissions(client *resty.Client, config *Config, question string) (SubmissionMap, error) {
 	limit := 50
 	qs, err := getContestSubmissionData(client, config.Contest, question, 0, limit)
 	if err != nil {
