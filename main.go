@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"gopkg.in/yaml.v2"
@@ -80,10 +83,113 @@ func getAllQuestions(client *resty.Client, config *Config) (*Questions, error) {
 	return qs, nil
 }
 
+type Submission struct {
+	ID             int     `json:"id"`
+	HackerID       int     `json:"hacker_id"`
+	CreatedAt      int     `json:"created_at"`
+	Kind           string  `json:"kind"`
+	Language       string  `json:"language"`
+	Score          float64 `json:"score"`
+	HackerUsername string  `json:"hacker_username"`
+}
+
+type Submissions struct {
+	Models []Submission `json:"models"`
+	Total  int          `json:"total"`
+}
+
+func buildGetSubmissionsUrl(contest string, question string, offset int, limit int) string {
+	return fmt.Sprintf("https://www.hackerrank.com/rest/contests/%s"+
+		"/judge_submissions/?offset=%d&"+
+		"limit=%d&challenge_id=%s",
+		contest, offset, limit, question)
+}
+
+func getContestSubmissionData(client *resty.Client, contest string, question string, offset int, limit int) (*Submissions, error) {
+	log.Printf("fetching submissions:%s limit %d offset %d", question, limit, offset)
+	resp, err := client.R().Get(buildGetSubmissionsUrl(contest, question, offset, limit))
+	if err != nil {
+		return nil, fmt.Errorf("error getting submissions, %v", err)
+	}
+	var submissions Submissions
+	err = json.Unmarshal(resp.Body(), &submissions)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing submissions, %v", err)
+	}
+	return &submissions, nil
+}
+
+// filter submissions and filter only top score, latest submission for a team
+func filterSubmissions(submissions *Submissions) map[string]Submission {
+	hm := make(map[string]Submission)
+
+	for _, s := range submissions.Models {
+		if val, ok := hm[s.HackerUsername]; ok {
+			if s.Score > val.Score {
+				hm[s.HackerUsername] = s
+			} else if s.Score == val.Score && s.CreatedAt > val.CreatedAt {
+				hm[s.HackerUsername] = s
+			}
+			continue
+		}
+		hm[s.HackerUsername] = s
+	}
+
+	return hm
+}
+
+func getAllSubmissions(client *resty.Client, config *Config, question string) (map[string]Submission, error) {
+	limit := 50
+	qs, err := getContestSubmissionData(client, config.Contest, question, 0, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching question names, %v", err)
+	}
+
+	// we get total questions in two requests
+	if qs.Total > limit {
+		// ok we got more to download
+		qs2, err := getContestSubmissionData(client, config.Contest, question, limit, qs.Total)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching question names, %v", err)
+		}
+		qs.Models = append(qs.Models, qs2.Models...)
+	}
+	return filterSubmissions(qs), nil
+}
+
+func exec(cfg *Config) {
+	client := resty.
+		New().
+		SetHeader("User-Agent", UserAgent).
+		SetHeader("Cookie", cfg.Cookies)
+
+	log.Println("fetching all question slugs")
+	qs, err := getAllQuestions(client, cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	outPath := filepath.Join(filepath.FromSlash(cfg.Output), time.Now().Format("2006-01-02-15-04"))
+	log.Printf("creating output directory: %v", outPath)
+	err = os.MkdirAll(outPath, os.ModePerm)
+	if err != nil {
+		log.Fatalf("error creating output directory, %v", err)
+	}
+
+	for _, q := range qs.Models {
+		_, err := getAllSubmissions(client, cfg, q.Slug)
+		if err != nil {
+			log.Fatalf("error fetching submissions, %v", err)
+		}
+		fmt.Println("waiting 1s...")
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "config.yaml", "Provide config for the tool")
 
+	flag.StringVar(&configPath, "config", "config.yaml", "Provide config for the tool")
 	flag.Parse()
 
 	cfg, err := parseConfig(configPath)
@@ -91,15 +197,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := resty.
-		New().
-		SetHeader("User-Agent", UserAgent).
-		SetHeader("Cookie", cfg.Cookies)
-
-	log.Println("fetching all question slugs")
-	_, err = getAllQuestions(client, cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	exec(cfg)
 }
