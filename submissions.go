@@ -69,7 +69,7 @@ func getContestSubmissionData(client *resty.Client, contest string, question str
 	return &submissions, nil
 }
 
-// filter submissions and filter only top score, latest submission for a team
+// filter submissions and filter only top score, oldest submission for a team
 func filterSubmissions(submissions *Submissions) SubmissionMap {
 	hm := make(SubmissionMap)
 
