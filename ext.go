@@ -45,7 +45,7 @@ var ext = map[string]string{
 	"python3":      "py",
 }
 
-func GetExtention(lang string) string {
+func GetExtension(lang string) string {
 	if v, ok := ext[lang]; ok {
 		return v
 	}

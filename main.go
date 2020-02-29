@@ -207,7 +207,7 @@ func createDownloadDir(path string) error {
 func saveDownload(config *Config, question string, data *SubmissionData) error {
 	// create dir
 	dirPath := filepath.Join(config.OutDir, question, data.Language)
-	filePath := filepath.Join(dirPath, fmt.Sprintf("%s.%s", data.HackerUsername, GetExtention(data.Language)))
+	filePath := filepath.Join(dirPath, fmt.Sprintf("%s.%s", data.HackerUsername, GetExtension(data.Language)))
 	err := createDownloadDir(dirPath)
 	if err != nil {
 		return fmt.Errorf("error creating download directory, %v", err)
