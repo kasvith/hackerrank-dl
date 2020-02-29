@@ -46,10 +46,10 @@ func saveFiles(wg *sync.WaitGroup, config *Config) {
 		select {
 		case sf := <-saveChan:
 			wg.Add(1)
+			defer wg.Done()
 			if err := SaveDownload(config, sf.q, sf.s); err != nil {
 				log.Errorf("error downloading %s:%s", sf.q, sf.s.HackerUsername)
 			}
-			wg.Done()
 		}
 	}
 }
@@ -81,28 +81,64 @@ func exec(cfg *Config) {
 		time.Sleep(1 * time.Second)
 	}
 
+	// start file saving service
 	go saveFiles(&wg, cfg)
 
+	// limit concurrency to 5
+	semaphore := make(chan struct{}, 5)
+
+	// have a max rate of 10/sec
+	rate := make(chan struct{}, 10)
+	for i := 0; i < cap(rate); i++ {
+		rate <- struct{}{}
+	}
+
+	// leaky bucket
+	go func() {
+		ticker := time.NewTicker(1000 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			_, ok := <-rate
+			// if this isn't going to run indefinitely, signal
+			// this to return by closing the rate channel.
+			if !ok {
+				return
+			}
+		}
+	}()
+
 	for q, submissionMap := range subs {
-		log.Infof("downloading %d submissions for %s", len(submissionMap), q)
+		log.Infof("preparing download %d submissions for %s", len(submissionMap), q)
 		for _, submission := range submissionMap {
-			ds, err := DownloadSubmission(client, cfg, &submission)
-			if err != nil {
-				log.Fatal(err)
-			}
+			wg.Add(1)
+			go func(qs string, s Submission) {
+				defer wg.Done()
 
-			saveChan <- SaveFileRequest{
-				s: ds,
-				q: q,
-			}
+				// wait for the rate limiter
+				rate <- struct{}{}
 
-			log.Info("sleeping 200ms...")
-			time.Sleep(200 * time.Millisecond)
+				// check the concurrency semaphore
+				semaphore <- struct{}{}
+				defer func() {
+					<-semaphore
+				}()
+
+				ds, err := DownloadSubmission(client, cfg, &s)
+				if err != nil {
+					log.Errorf("error downloading, ", err)
+				}
+
+				saveChan <- SaveFileRequest{
+					s: ds,
+					q: qs,
+				}
+			}(q, submission)
 		}
 	}
 
 	log.Info("waiting to finish all tasks")
 	wg.Wait()
+	close(rate)
 
 	log.Info("finished executing")
 }
