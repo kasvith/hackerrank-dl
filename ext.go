@@ -5,7 +5,7 @@ var ext = map[string]string{
 	"bash":         "sh",
 	"c":            "c",
 	"clojure":      "clj",
-	"coffeescript": "coffees",
+	"coffeescript": "coffee",
 	"cpp":          "cpp",
 	"cpp14":        "cpp",
 	"csharp":       "cs",
