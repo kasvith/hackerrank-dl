@@ -44,3 +44,10 @@ var ext = map[string]string{
 	"python":       "py",
 	"python3":      "py",
 }
+
+func GetExtention(lang string) string {
+	if v, ok := ext[lang]; ok {
+		return v
+	}
+	return "txt"
+}

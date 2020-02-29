@@ -23,6 +23,7 @@ type Config struct {
 	Contest string `yaml:"contest"`
 	Cookies string `yaml:"cookies"`
 	Output  string `yaml:"output"`
+	OutDir  string `yaml:"-"`
 }
 
 func parseConfig(filename string) (*Config, error) {
@@ -160,6 +161,64 @@ func getAllSubmissions(client *resty.Client, config *Config, question string) (S
 	return filterSubmissions(qs), nil
 }
 
+type SubmissionData struct {
+	ID             int    `json:"id"`
+	Language       string `json:"language"`
+	Code           string `json:"code"`
+	HackerID       int    `json:"hacker_id"`
+	HackerUsername string `json:"hacker_username"`
+}
+
+type SubmissionDataResp struct {
+	Model SubmissionData `json:"model"`
+}
+
+func buildSubmissionDownloadUrl(contest string, id int) string {
+	return fmt.Sprintf("https://www.hackerrank.com/rest/contests/%s/submissions/%d", contest, id)
+}
+
+func downloadSubmission(client *resty.Client, config *Config, submission *Submission) (*SubmissionData, error) {
+	log.Printf("downloading submission %s:%d", submission.HackerUsername, submission.ID)
+	resp, err := client.R().Get(buildSubmissionDownloadUrl(config.Contest, submission.ID))
+	if err != nil {
+		return nil, fmt.Errorf("error getting submission data for %d, %v", submission.ID, err)
+	}
+	var submissionData SubmissionDataResp
+	err = json.Unmarshal(resp.Body(), &submissionData)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing submission data for %d, %v", submission.ID, err)
+	}
+	// hr does not set username for same person so we set it explicitly
+	submissionData.Model.HackerUsername = submission.HackerUsername
+	return &submissionData.Model, nil
+}
+
+func createDownloadDir(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err = os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func saveDownload(config *Config, question string, data *SubmissionData) error {
+	// create dir
+	dirPath := filepath.Join(config.OutDir, question, data.Language)
+	filePath := filepath.Join(dirPath, fmt.Sprintf("%s.%s", data.HackerUsername, GetExtention(data.Language)))
+	err := createDownloadDir(dirPath)
+	if err != nil {
+		return fmt.Errorf("error creating download directory, %v", err)
+	}
+	log.Printf("saving file: %s", filePath)
+	err = ioutil.WriteFile(filePath, []byte(data.Code), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error saving file, %v", err)
+	}
+	return nil
+}
+
 func exec(cfg *Config) {
 	client := resty.
 		New().
@@ -172,21 +231,41 @@ func exec(cfg *Config) {
 		log.Fatal(err)
 	}
 
-	outPath := filepath.Join(filepath.FromSlash(cfg.Output), time.Now().Format("2006-01-02-15-04"))
-	log.Printf("creating output directory: %v", outPath)
-	err = os.MkdirAll(outPath, os.ModePerm)
+	log.Printf("creating output directory: %v", cfg.OutDir)
+	err = os.MkdirAll(cfg.OutDir, os.ModePerm)
 	if err != nil {
 		log.Fatalf("error creating output directory, %v", err)
 	}
 
+	var subs = make(map[string]SubmissionMap)
 	for _, q := range qs.Models {
-		_, err := getAllSubmissions(client, cfg, q.Slug)
+		s, err := getAllSubmissions(client, cfg, q.Slug)
 		if err != nil {
 			log.Fatalf("error fetching submissions, %v", err)
 		}
+		subs[q.Slug] = s
 		fmt.Println("waiting 1s...")
 		time.Sleep(1 * time.Second)
 	}
+
+	for q, s := range subs {
+		log.Printf("downloading submissions for %s", q)
+		for _, v := range s {
+			ds, err := downloadSubmission(client, cfg, &v)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = saveDownload(cfg, q, ds)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Println("sleeping 200ms...")
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+
+	log.Println("finished executing")
 }
 
 func main() {
@@ -199,6 +278,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	cfg.OutDir = filepath.Join(filepath.FromSlash(cfg.Output), time.Now().Format("2006-01-02-15-04"))
 
 	exec(cfg)
 }
