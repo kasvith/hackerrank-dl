@@ -84,7 +84,7 @@ func exec(cfg *Config) {
 	go saveFiles(&wg, cfg)
 
 	for q, submissionMap := range subs {
-		log.Infof("downloading %d submissions for %s", q, len(submissionMap))
+		log.Infof("downloading %d submissions for %s", len(submissionMap), q)
 		for _, submission := range submissionMap {
 			ds, err := DownloadSubmission(client, cfg, &submission)
 			if err != nil {
