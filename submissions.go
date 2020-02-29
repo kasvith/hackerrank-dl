@@ -74,6 +74,10 @@ func filterSubmissions(submissions *Submissions) SubmissionMap {
 	hm := make(SubmissionMap)
 
 	for _, s := range submissions.Models {
+		if s.HackerUsername == "[deleted]" {
+			continue
+		}
+
 		if val, ok := hm[s.HackerUsername]; ok {
 			if s.Score > val.Score {
 				hm[s.HackerUsername] = s
