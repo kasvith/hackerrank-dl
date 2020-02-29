@@ -58,16 +58,16 @@ func exec(cfg *Config) {
 	wg := sync.WaitGroup{}
 	client := CreateClient(cfg)
 
+	log.Infof("creating output directory: %v", cfg.OutDir)
+	err := os.MkdirAll(cfg.OutDir, os.ModePerm)
+	if err != nil {
+		log.Fatalf("error creating output directory, %v", err)
+	}
+
 	log.Info("fetching all question meta data")
 	qs, err := GetAllQuestions(client, cfg)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	log.Infof("creating output directory: %v", cfg.OutDir)
-	err = os.MkdirAll(cfg.OutDir, os.ModePerm)
-	if err != nil {
-		log.Fatalf("error creating output directory, %v", err)
 	}
 
 	var subs = make(map[string]SubmissionMap)
@@ -83,11 +83,10 @@ func exec(cfg *Config) {
 
 	go saveFiles(&wg, cfg)
 
-	for q, s := range subs {
-		log.Infof("downloading submissions for %s", q)
-		log.Infof("downloading total %d submissions", len(s))
-		for _, v := range s {
-			ds, err := DownloadSubmission(client, cfg, &v)
+	for q, submissionMap := range subs {
+		log.Infof("downloading %d submissions for %s", q, len(submissionMap))
+		for _, submission := range submissionMap {
+			ds, err := DownloadSubmission(client, cfg, &submission)
 			if err != nil {
 				log.Fatal(err)
 			}
