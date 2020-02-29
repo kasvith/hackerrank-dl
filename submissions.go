@@ -28,7 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type SubmissionMap map[string]Submission
@@ -56,7 +56,7 @@ func buildGetSubmissionsUrl(contest string, question string, offset int, limit i
 }
 
 func getContestSubmissionData(client *resty.Client, contest string, question string, offset int, limit int) (*Submissions, error) {
-	log.Printf("fetching submissions:%s limit %d offset %d", question, limit, offset)
+	log.Infof("fetching submissions:%s limit %d offset %d", question, limit, offset)
 	resp, err := client.R().Get(buildGetSubmissionsUrl(contest, question, offset, limit))
 	if err != nil {
 		return nil, fmt.Errorf("error getting submissions, %v", err)
@@ -125,7 +125,7 @@ func buildSubmissionDownloadUrl(contest string, id int) string {
 }
 
 func DownloadSubmission(client *resty.Client, config *Config, submission *Submission) (*SubmissionData, error) {
-	log.Printf("downloading submission %s:%d", submission.HackerUsername, submission.ID)
+	log.Infof("downloading submission %s:%d", submission.HackerUsername, submission.ID)
 	resp, err := client.R().Get(buildSubmissionDownloadUrl(config.Contest, submission.ID))
 	if err != nil {
 		return nil, fmt.Errorf("error getting submission data for %d, %v", submission.ID, err)
@@ -135,7 +135,9 @@ func DownloadSubmission(client *resty.Client, config *Config, submission *Submis
 	if err != nil {
 		return nil, fmt.Errorf("error parsing submission data for %d, %v", submission.ID, err)
 	}
+
 	// hr does not set username for same person so we set it explicitly
 	submissionData.Model.HackerUsername = submission.HackerUsername
+
 	return &submissionData.Model, nil
 }

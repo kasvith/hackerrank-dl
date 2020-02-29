@@ -26,23 +26,45 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
+type SaveFileRequest struct {
+	s *SubmissionData
+	q string
+}
+
+var saveChan = make(chan SaveFileRequest)
+
+func saveFiles(wg *sync.WaitGroup, config *Config) {
+	for {
+		select {
+		case sf := <-saveChan:
+			wg.Add(1)
+			if err := SaveDownload(config, sf.q, sf.s); err != nil {
+				log.Errorf("error downloading %s:%s", sf.q, sf.s.HackerUsername)
+			}
+			wg.Done()
+		}
+	}
+}
+
 func exec(cfg *Config) {
+	wg := sync.WaitGroup{}
 	client := CreateClient(cfg)
 
-	log.Println("fetching all question meta data")
+	log.Info("fetching all question meta data")
 	qs, err := GetAllQuestions(client, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("creating output directory: %v", cfg.OutDir)
+	log.Infof("creating output directory: %v", cfg.OutDir)
 	err = os.MkdirAll(cfg.OutDir, os.ModePerm)
 	if err != nil {
 		log.Fatalf("error creating output directory, %v", err)
@@ -55,28 +77,35 @@ func exec(cfg *Config) {
 			log.Fatalf("error fetching submissions, %v", err)
 		}
 		subs[q.Slug] = s
-		fmt.Println("waiting 1s...")
+		log.Info("waiting 1s...")
 		time.Sleep(1 * time.Second)
 	}
 
+	go saveFiles(&wg, cfg)
+
 	for q, s := range subs {
-		log.Printf("downloading submissions for %s", q)
+		log.Infof("downloading submissions for %s", q)
+		log.Infof("downloading total %d submissions", len(s))
 		for _, v := range s {
 			ds, err := DownloadSubmission(client, cfg, &v)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			err = SaveDownload(cfg, q, ds)
-			if err != nil {
-				log.Fatal(err)
+			saveChan <- SaveFileRequest{
+				s: ds,
+				q: q,
 			}
-			log.Println("sleeping 200ms...")
+
+			log.Info("sleeping 200ms...")
 			time.Sleep(200 * time.Millisecond)
 		}
 	}
 
-	log.Println("finished executing")
+	log.Info("waiting to finish all tasks")
+	wg.Wait()
+
+	log.Info("finished executing")
 }
 
 func main() {
@@ -90,6 +119,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// create output directory with current time
 	cfg.OutDir = filepath.Join(filepath.FromSlash(cfg.Output), time.Now().Format("2006-01-02-15-04"))
 
 	exec(cfg)

@@ -28,7 +28,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Questions struct {
@@ -45,7 +46,7 @@ func buildGetQuestionsUrl(contestSlug string, offset int, limit int) string {
 }
 
 func getQuestions(client *resty.Client, contest string, offset int, limit int) (*Questions, error) {
-	log.Printf("fetching %d qustions from offset %d", limit, offset)
+	log.Infof("fetching %d qustions from offset %d", limit, offset)
 	resp, err := client.R().Get(buildGetQuestionsUrl(contest, offset, limit))
 	if err != nil {
 		return nil, fmt.Errorf("error getting questions, %v", err)
