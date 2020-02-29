@@ -62,7 +62,7 @@ func exec(cfg *Config) {
 	for q, s := range subs {
 		log.Printf("downloading submissions for %s", q)
 		for _, v := range s {
-			ds, err := downloadSubmission(client, cfg, &v)
+			ds, err := DownloadSubmission(client, cfg, &v)
 			if err != nil {
 				log.Fatal(err)
 			}

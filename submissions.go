@@ -124,7 +124,7 @@ func buildSubmissionDownloadUrl(contest string, id int) string {
 	return fmt.Sprintf("https://www.hackerrank.com/rest/contests/%s/submissions/%d", contest, id)
 }
 
-func downloadSubmission(client *resty.Client, config *Config, submission *Submission) (*SubmissionData, error) {
+func DownloadSubmission(client *resty.Client, config *Config, submission *Submission) (*SubmissionData, error) {
 	log.Printf("downloading submission %s:%d", submission.HackerUsername, submission.ID)
 	resp, err := client.R().Get(buildSubmissionDownloadUrl(config.Contest, submission.ID))
 	if err != nil {
