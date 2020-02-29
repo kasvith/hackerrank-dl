@@ -21,12 +21,12 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"
 
 default: build
 
-all: clean build_all install
+all: clean release install
 
 build:
 	go build ${LDFLAGS} -o ${BINARY}
 
-build_all:
+release:
 	$(foreach GOOS, $(PLATFORMS),\
 	$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build -v -o $(BINARY)-$(GOOS)-$(GOARCH))))
 
