@@ -4,3 +4,4 @@ hackerrank-dl*
 *.exe
 vendor
 out
+config.yaml
