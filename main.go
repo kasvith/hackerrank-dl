@@ -46,10 +46,10 @@ func saveFiles(wg *sync.WaitGroup, config *Config) {
 		select {
 		case sf := <-saveChan:
 			wg.Add(1)
-			defer wg.Done()
 			if err := SaveDownload(config, sf.q, sf.s); err != nil {
 				log.Errorf("error downloading %s:%s", sf.q, sf.s.HackerUsername)
 			}
+			wg.Done()
 		}
 	}
 }
@@ -138,6 +138,7 @@ func exec(cfg *Config) {
 
 	log.Info("waiting to finish all tasks")
 	wg.Wait()
+	close(saveChan)
 	close(rate)
 
 	log.Info("finished executing")
