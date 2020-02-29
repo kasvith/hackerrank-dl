@@ -131,7 +131,8 @@ func filterSubmissions(submissions *Submissions) SubmissionMap {
 		if val, ok := hm[s.HackerUsername]; ok {
 			if s.Score > val.Score {
 				hm[s.HackerUsername] = s
-			} else if s.Score == val.Score && s.CreatedAt > val.CreatedAt {
+			} else if s.Score == val.Score && s.CreatedAt < val.CreatedAt {
+				// if we have two submissions with same score, pick the oldest one
 				hm[s.HackerUsername] = s
 			}
 			continue
