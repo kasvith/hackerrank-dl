@@ -40,7 +40,7 @@ Run `chmod +x ./build/build.sh && ./build/build.sh`
 
 ## How to use
 
-Download binary for your platform in release page(or build yourself :hammer:).
+Download binary for your platform from [release](https://github.com/kasvith/hackerrank-dl/releases) page (or build yourself :hammer:).
 
 The usage of the tool is simple. You have to provide a `config.yaml` in your current working directory and tool will pick this up. `config.yaml` contains all the necessary info to download submissions from a hackerrank contest.
 
