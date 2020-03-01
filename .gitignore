@@ -5,3 +5,4 @@ hackerrank-dl*
 vendor
 out
 config.yaml
+.DS_Store
