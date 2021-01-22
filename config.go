@@ -26,15 +26,19 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Contest string `yaml:"contest"`
-	Cookies string `yaml:"cookies"`
-	Output  string `yaml:"output"`
-	OutDir  string `yaml:"-"`
+	Contest           string `yaml:"contest"`
+	Cookies           string `yaml:"cookies"`
+	Output            string `yaml:"output"`
+	OutDir            string `yaml:"-"`
+	ParallelDownloads int    `yaml:"parallelDownloads"`
+	MaxWaitTime       int    `yaml:"waitTime"`
+	Rate              int    `yaml:"rate"`
 }
 
 func ParseConfig(filename string) (*Config, error) {
@@ -47,6 +51,16 @@ func ParseConfig(filename string) (*Config, error) {
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config file, %v", err)
+	}
+
+	if cfg.MaxWaitTime == 0 {
+		cfg.MaxWaitTime = 1
+	}
+	if cfg.ParallelDownloads == 0 {
+		cfg.ParallelDownloads = 5
+	}
+	if cfg.Rate == 0 {
+		cfg.Rate = 10
 	}
 
 	return &cfg, nil

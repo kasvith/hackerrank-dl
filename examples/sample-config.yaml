@@ -2,3 +2,6 @@ contest: our-contest
 cookies: >-
   cookies copied from chrome for hackerrank
 output: results
+parallelDownloads: 5 # limit 1 parallel download
+waitTime: 1 #seconds
+rate: 10 # rate per wait time

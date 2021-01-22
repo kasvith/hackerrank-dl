@@ -27,6 +27,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 )
@@ -134,9 +135,13 @@ func DownloadSubmission(client *resty.Client, config *Config, submission *Submis
 	if err != nil {
 		return nil, fmt.Errorf("error getting submission data for %d, %v", submission.ID, err)
 	}
+	if resp.StatusCode() != 200 {
+		return nil, fmt.Errorf("error getting submission data for %d, status: %s reason: %s", submission.ID, resp.Status(), resp.Body())
+	}
 	var submissionData SubmissionDataResp
 	err = json.Unmarshal(resp.Body(), &submissionData)
 	if err != nil {
+		fmt.Println(string(resp.Body()), resp.Status())
 		return nil, fmt.Errorf("error parsing submission data for %d, %v", submission.ID, err)
 	}
 

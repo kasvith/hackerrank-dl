@@ -84,18 +84,18 @@ func exec(cfg *Config) {
 	// start file saving service
 	go saveFiles(&wg, cfg)
 
-	// limit concurrency to 5
-	semaphore := make(chan struct{}, 5)
+	// limit concurrency
+	semaphore := make(chan struct{}, cfg.ParallelDownloads)
 
-	// have a max rate of 10/sec
-	rate := make(chan struct{}, 10)
+	// have a max rate
+	rate := make(chan struct{}, cfg.Rate)
 	for i := 0; i < cap(rate); i++ {
 		rate <- struct{}{}
 	}
 
 	// leaky bucket
 	go func() {
-		ticker := time.NewTicker(1000 * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(cfg.MaxWaitTime) * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			_, ok := <-rate
@@ -111,6 +111,7 @@ func exec(cfg *Config) {
 		log.Infof("preparing download %d submissions for %s", len(submissionMap), q)
 		for _, submission := range submissionMap {
 			wg.Add(1)
+
 			go func(qs string, s Submission) {
 				defer wg.Done()
 
@@ -125,7 +126,8 @@ func exec(cfg *Config) {
 
 				ds, err := DownloadSubmission(client, cfg, &s)
 				if err != nil {
-					log.Errorf("error downloading, ", err)
+					log.Errorf("error downloading, %v", err)
+					return
 				}
 
 				saveChan <- SaveFileRequest{
@@ -157,6 +159,8 @@ func main() {
 
 	// create output directory with current time
 	cfg.OutDir = filepath.Join(filepath.FromSlash(cfg.Output), time.Now().Format("2006-01-02-15-04"))
+
+	log.Infof("Parallel: %d, Rate: %d, Delay: %ds [%d/%ds]", cfg.ParallelDownloads, cfg.Rate, cfg.MaxWaitTime, cfg.Rate, cfg.MaxWaitTime)
 
 	exec(cfg)
 }
