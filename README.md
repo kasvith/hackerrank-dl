@@ -56,6 +56,12 @@ cookies: >-
   abc=123; xyz=123;
 # output directory
 output: results
+# limit 5 parallel download threads
+parallelDownloads: 5 
+# wait time between downloads in seconds
+waitTime: 1 
+# burst per wait time
+rate: 10 
 ```
 
 Run `./hackerrank-dl` with `config.yaml` in the working directory to start the magic.
