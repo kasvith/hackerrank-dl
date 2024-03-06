@@ -67,6 +67,11 @@ specificQuestions:
   - "question-slug-1"
   - "question-slug-2"
   - "question-slug-3"
+# select users to download their submissions (optional)
+specificUsers:
+  - "user-1"
+  - "user-2"
+  - "user-3"
 ```
 
 Run `./hackerrank-dl` with `config.yaml` in the working directory to start the magic.

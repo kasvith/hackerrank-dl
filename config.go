@@ -39,7 +39,8 @@ type Config struct {
 	ParallelDownloads int      `yaml:"parallelDownloads"`
 	MaxWaitTime       int      `yaml:"waitTime"`
 	Rate              int      `yaml:"rate"`
-	SpecificQuestions []string `yaml:"specificQuestions,omitempty"` // New field
+	SpecificQuestions []string `yaml:"specificQuestions,omitempty"`
+	SpecificUsers []string `yaml:"specificUsers,omitempty"`
 }
 
 

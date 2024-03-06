@@ -27,6 +27,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
@@ -71,7 +72,7 @@ func getContestSubmissionData(client *resty.Client, contest string, question str
 }
 
 // filter submissions and filter only top score, oldest submission for a team
-func filterSubmissions(submissions *Submissions) SubmissionMap {
+func filterSubmissions(submissions *Submissions, config *Config) SubmissionMap {
 	hm := make(SubmissionMap)
 
 	for _, s := range submissions.Models {
@@ -79,16 +80,29 @@ func filterSubmissions(submissions *Submissions) SubmissionMap {
 			continue
 		}
 
-		if val, ok := hm[s.HackerUsername]; ok {
-			if s.Score > val.Score {
-				hm[s.HackerUsername] = s
-			} else if s.Score == val.Score && s.CreatedAt < val.CreatedAt {
-				// if we have two submissions with same score, pick the oldest one
+		if(len(config.SpecificUsers) > 0) {
+			if (slices.Contains(config.SpecificUsers, s.HackerUsername)) {
+				if val, ok := hm[s.HackerUsername]; ok {
+					if s.Score > val.Score {
+						hm[s.HackerUsername] = s
+					} else if s.Score == val.Score && s.CreatedAt > val.CreatedAt {
+						hm[s.HackerUsername] = s
+					}
+					continue
+				}
 				hm[s.HackerUsername] = s
 			}
-			continue
+		} else {
+			if val, ok := hm[s.HackerUsername]; ok {
+				if s.Score > val.Score {
+					hm[s.HackerUsername] = s
+				} else if s.Score == val.Score && s.CreatedAt > val.CreatedAt {
+					hm[s.HackerUsername] = s
+				}
+				continue
+			}
+			hm[s.HackerUsername] = s
 		}
-		hm[s.HackerUsername] = s
 	}
 
 	return hm
@@ -110,7 +124,7 @@ func GetAllSubmissions(client *resty.Client, config *Config, question string) (S
 		}
 		qs.Models = append(qs.Models, qs2.Models...)
 	}
-	return filterSubmissions(qs), nil
+	return filterSubmissions(qs, config), nil
 }
 
 type SubmissionData struct {
