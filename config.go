@@ -26,23 +26,26 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Contest           string `yaml:"contest"`
-	Cookies           string `yaml:"cookies"`
-	Output            string `yaml:"output"`
-	OutDir            string `yaml:"-"`
-	ParallelDownloads int    `yaml:"parallelDownloads"`
-	MaxWaitTime       int    `yaml:"waitTime"`
-	Rate              int    `yaml:"rate"`
+	Contest           string   `yaml:"contest"`
+	Cookies           string   `yaml:"cookies"`
+	Output            string   `yaml:"output"`
+	OutDir            string   `yaml:"-"`
+	ParallelDownloads int      `yaml:"parallelDownloads"`
+	MaxWaitTime       int      `yaml:"waitTime"`
+	Rate              int      `yaml:"rate"`
+	SpecificQuestions []string `yaml:"specificQuestions,omitempty"`
+	SpecificUsers []string `yaml:"specificUsers,omitempty"`
 }
 
+
 func ParseConfig(filename string) (*Config, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("error reading config file, %v", err)
 	}

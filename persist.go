@@ -26,10 +26,10 @@ package main
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func CreateDownloadDir(path string) error {
@@ -52,7 +52,7 @@ func SaveDownload(config *Config, question string, data *SubmissionData) error {
 		return fmt.Errorf("error creating download directory, %v", err)
 	}
 	log.Infof("saving file: %s", filePath)
-	err = ioutil.WriteFile(filePath, []byte(data.Code), os.ModePerm)
+	err = os.WriteFile(filePath, []byte(data.Code), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("error saving file, %v", err)
 	}

@@ -6,3 +6,5 @@ vendor
 out
 config.yaml
 .DS_Store
+
+/results

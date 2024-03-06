@@ -5,3 +5,11 @@ output: results
 parallelDownloads: 5 # limit 1 parallel download
 waitTime: 1 #seconds
 rate: 10 # rate per wait time
+specificQuestions:
+  - "question-slug-1"
+  - "question-slug-2"
+  - "question-slug-3"
+specificUsers:
+  - "user-1"
+  - "user-2"
+  - "user-3"

@@ -27,6 +27,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/go-resty/resty/v2"
 
 	log "github.com/sirupsen/logrus"
@@ -63,17 +64,37 @@ func GetAllQuestions(client *resty.Client, config *Config) (*Questions, error) {
 	limit := 50
 	qs, err := getQuestions(client, config.Contest, 0, limit)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching question names, %v", err)
+			return nil, fmt.Errorf("error fetching question names, %v", err)
 	}
 
-	// we get total questions in two requests
-	if qs.Total > limit {
-		// ok we got more to download
-		qs2, err := getQuestions(client, config.Contest, limit, qs.Total)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching question names, %v", err)
-		}
-		qs.Models = append(qs.Models, qs2.Models...)
+	// Filter for specific questions if SpecificQuestions is not empty
+	if len(config.SpecificQuestions) > 0 {
+			filteredModels := []struct {
+					ID   int    `json:"id"`
+					Slug string `json:"slug"`
+			}{}
+
+			for _, q := range qs.Models {
+					for _, specificSlug := range config.SpecificQuestions {
+							if q.Slug == specificSlug {
+									filteredModels = append(filteredModels, q)
+									break
+							}
+					}
+			}
+			qs.Models = filteredModels
+			qs.Total = len(filteredModels)
+	} else {
+			// If no specific questions, get the rest of the questions
+			if qs.Total > limit {
+					qs2, err := getQuestions(client, config.Contest, limit, qs.Total)
+					if err != nil {
+							return nil, fmt.Errorf("error fetching question names, %v", err)
+					}
+					qs.Models = append(qs.Models, qs2.Models...)
+			}
 	}
+
 	return qs, nil
 }
+

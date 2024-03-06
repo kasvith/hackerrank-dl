@@ -57,11 +57,21 @@ cookies: >-
 # output directory
 output: results
 # limit 5 parallel download threads
-parallelDownloads: 5 
+parallelDownloads: 5
 # wait time between downloads in seconds
-waitTime: 1 
+waitTime: 1
 # burst per wait time
-rate: 10 
+rate: 10
+# select questions to download (optional)
+specificQuestions:
+  - "question-slug-1"
+  - "question-slug-2"
+  - "question-slug-3"
+# select users to download their submissions (optional)
+specificUsers:
+  - "user-1"
+  - "user-2"
+  - "user-3"
 ```
 
 Run `./hackerrank-dl` with `config.yaml` in the working directory to start the magic.
